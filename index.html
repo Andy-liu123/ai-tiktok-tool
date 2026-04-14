@@ -15,10 +15,13 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .container {
             max-width: 800px;
-            margin: 0 auto;
+            width: 100%;
             background: white;
             border-radius: 15px;
             padding: 2rem;
@@ -74,22 +77,21 @@
             color: #e74c3c;
             text-align: center;
             margin: 1rem 0;
-            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>AI TikTok Script Generator</h1>
+        <h1>AI TikTok Script Generator AI 抖音脚本生成器</h1>
         <div class="input-group">
-            <label for="topic">Video Topic (e.g., skincare routine, funny cat videos)</label>
+            <label for="topic">Video Topic (e.g., skincare routine, funny cat videos)<br>视频主题（例如，护肤流程、搞笑猫咪视频）</label>
             <input type="text" id="topic" placeholder="Enter your video topic here...">
         </div>
-        <button id="generateBtn">Generate TikTok Script</button>
-        <div class="loading" id="loading">Generating your script...</div>
+        <button id="generateBtn">Generate TikTok Script 生成TikTok脚本</button>
+        <div class="loading" id="loading">Generating... 生成中...</div>
         <div class="error" id="error">Oops! Something went wrong. Please try again.</div>
         <div class="input-group" style="margin-top: 1.5rem;">
-            <label for="result">Generated Script</label>
+            <label for="result">Generated Script 生成的脚本</label>
             <textarea id="result" readonly></textarea>
         </div>
     </div>
@@ -104,7 +106,7 @@
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
             if (!topic) {
-                alert('Please enter a video topic!');
+                alert('Please enter a video topic! 请输入视频主题！');
                 return;
             }
 
@@ -113,7 +115,8 @@
             resultTextarea.value = '';
 
             try {
-                const response = await fetch('/api/generate', {
+                // ✅ 关键修改：把 /api/generate 改成 /generate
+                const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -121,15 +124,16 @@
                     body: JSON.stringify({ topic })
                 });
 
+                const data = await response.json();
+
                 if (!response.ok) {
-                    throw new Error('Failed to generate script');
+                    throw new Error(data.error || 'Failed to generate script');
                 }
 
-                const data = await response.json();
                 resultTextarea.value = data.script;
             } catch (err) {
+                console.error('Error:', err);
                 error.style.display = 'block';
-                console.error(err);
             } finally {
                 loading.style.display = 'none';
             }
