@@ -12,11 +12,14 @@
         .input-group {margin-bottom: 1.5rem;}
         label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: bold;}
         input, textarea {width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;}
-        textarea {min-height: 220px; resize: vertical;}
+        textarea {min-height: 220px; resize: vertical; margin-bottom: 1rem;}
         button {width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s;}
         button:hover {transform: translateY(-2px);}
+        button:disabled {opacity: 0.6; cursor: not-allowed; transform: none;}
         .loading {text-align: center; margin: 1rem 0; color: #667eea; display: none;}
         .error {color: #e74c3c; text-align: center; margin: 1rem 0; font-weight: 500;}
+        .success {color: #27ae60; text-align: center; margin: 0.5rem 0; font-weight: 500; display: none;}
+        #copyBtn {margin-top: 0; display: none;}
     </style>
 </head>
 <body>
@@ -32,16 +35,21 @@
         <div class="input-group" style="margin-top: 1.5rem;">
             <label for="result">Generated Script 生成的脚本</label>
             <textarea id="result" readonly></textarea>
+            <button id="copyBtn">📋 一键复制脚本</button>
+            <div class="success" id="copySuccess">✅ 复制成功！</div>
         </div>
     </div>
 
     <script>
         const generateBtn = document.getElementById('generateBtn');
+        const copyBtn = document.getElementById('copyBtn');
         const topicInput = document.getElementById('topic');
         const resultTextarea = document.getElementById('result');
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
+        const copySuccess = document.getElementById('copySuccess');
 
+        // 生成脚本
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
             if (!topic) {
@@ -52,9 +60,11 @@
             loading.style.display = 'block';
             error.textContent = '';
             resultTextarea.value = '';
+            copyBtn.style.display = 'none';
+            copySuccess.style.display = 'none';
+            generateBtn.disabled = true;
 
             try {
-                // ✅ 只调用自己的后端接口，没有任何前端换Token的代码
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -65,11 +75,33 @@
                 if (!response.ok) throw new Error(data.error || '请求失败');
 
                 resultTextarea.value = data.script;
+                copyBtn.style.display = 'block'; // 生成成功后显示复制按钮
             } catch (err) {
                 error.textContent = `出错了：${err.message}`;
                 console.error(err);
             } finally {
                 loading.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        });
+
+        // 一键复制脚本
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(resultTextarea.value);
+                copySuccess.style.display = 'block';
+                // 3秒后隐藏成功提示
+                setTimeout(() => {
+                    copySuccess.style.display = 'none';
+                }, 3000);
+            } catch (err) {
+                // 兼容旧浏览器
+                resultTextarea.select();
+                document.execCommand('copy');
+                copySuccess.style.display = 'block';
+                setTimeout(() => {
+                    copySuccess.style.display = 'none';
+                }, 3000);
             }
         });
     </script>
