@@ -115,7 +115,7 @@
             resultTextarea.value = '';
 
             try {
-                // ✅ 关键修改：把 /api/generate 改成 /generate
+                // ✅ 关键修改：把 /api/generate 改成 /generate，和后端路由完全匹配
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {
