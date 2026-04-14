@@ -8,17 +8,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Topic is required' });
   }
 
+  // 百度千帆新版API Key直接作为access_token使用，无需Secret Key
   const API_KEY = process.env.API_KEY;
-  const SECRET_KEY = process.env.SECRET_KEY;
+
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'API_KEY not configured' });
+  }
 
   try {
-    const tokenResp = await fetch(`https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${API_KEY}&client_secret=${SECRET_KEY}`);
-    const tokenData = await tokenResp.json();
-    const token = tokenData.access_token;
-
-    const aiResp = await fetch(`https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/deepseek_v3?access_token=${token}`, {
+    // 直接用API Key调用DeepSeek-V3，无需获取token
+    const aiResp = await fetch(`https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/deepseek_v3?access_token=${API_KEY}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         messages: [{
           role: "user",
@@ -29,8 +32,14 @@ export default async function handler(req, res) {
     });
 
     const aiData = await aiResp.json();
-    res.json({ script: aiData.result });
+    
+    if (aiData.error) {
+      throw new Error(aiData.error.message);
+    }
+
+    res.status(200).json({ script: aiData.result });
   } catch (e) {
-    res.status(500).json({ error: 'failed' });
+    console.error('API Error:', e);
+    res.status(500).json({ error: 'Failed to generate script: ' + e.message });
   }
 }
