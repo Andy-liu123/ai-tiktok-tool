@@ -12,11 +12,11 @@
         .input-group {margin-bottom: 1.5rem;}
         label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: 700;}
         input, textarea {width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;}
-        textarea {min-height: 200px; resize: vertical; margin-top: 0.5rem;}
+        textarea {min-height: 220px; resize: vertical; margin-top: 0.5rem;}
         button {width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.2s;}
         button:hover {transform: translateY(-2px);}
         .loading {text-align: center; margin: 1rem 0; color: #667eea; display: none;}
-        .error {color: #e74c3c; text-align: center; margin: 1rem 0;}
+        .error {color: #e74c3c; text-align: center; margin: 1rem 0; font-weight: 500;}
     </style>
 </head>
 <body>
@@ -24,7 +24,7 @@
         <h1>AI TikTok Script Generator AI 抖音脚本生成器</h1>
         <div class="input-group">
             <label for="topic">Video Topic (e.g., skincare routine, funny cat videos)<br>视频主题（例如，护肤流程、搞笑猫咪视频）</label>
-            <input type="text" id="topic" placeholder="Enter your topic..." value="skincare routine for beginners">
+            <input type="text" id="topic" placeholder="Enter your video topic here..." value="skincare routine for beginners">
         </div>
         <button id="generateBtn">Generate TikTok Script 生成TikTok脚本</button>
         <div class="loading" id="loading">Generating... 生成中...</div>
@@ -51,22 +51,13 @@
             resultTextarea.value = '';
 
             try {
-                // 请求后端接口
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({topic})
                 });
 
-                // 先拿文本，再解析JSON，彻底避免解析崩溃
-                const respText = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(respText);
-                } catch (e) {
-                    throw new Error(`接口返回错误：${respText.slice(0, 200)}`);
-                }
-
+                const data = await response.json();
                 if (!response.ok) throw new Error(data.error || '请求失败');
 
                 resultTextarea.value = data.script;
