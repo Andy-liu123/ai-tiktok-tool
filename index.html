@@ -8,7 +8,8 @@
         * {margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif;}
         body {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 2rem; display: flex; justify-content: center; align-items: center;}
         .container {max-width: 800px; width: 100%; background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
-        h1 {color: #333; text-align: center; margin-bottom: 2rem;}
+        h1 {color: #333; text-align: center; margin-bottom: 1rem;}
+        .free-count {text-align: center; color: #667eea; font-weight: bold; margin-bottom: 1.5rem; font-size: 1.1rem;}
         .input-group {margin-bottom: 1.5rem;}
         label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: bold;}
         input, textarea {width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;}
@@ -17,14 +18,18 @@
         button:hover {transform: translateY(-2px);}
         button:disabled {opacity: 0.6; cursor: not-allowed; transform: none;}
         .loading {text-align: center; margin: 1rem 0; color: #667eea; display: none;}
-        .error {color: #e74c3c; text-align: center; margin: 1rem 0; font-weight: 500;}
+        .error {color: #e74c3c; text-align: center; margin: 1rem 0; font-weight: 500; line-height: 1.6;}
         .success {color: #27ae60; text-align: center; margin: 0.5rem 0; font-weight: 500; display: none;}
         #copyBtn {margin-top: 0; display: none;}
+        .payment-box {background: #f8f9fa; border: 2px dashed #667eea; border-radius: 8px; padding: 1.5rem; margin-top: 1rem; text-align: center; display: none;}
+        .payment-box h3 {color: #333; margin-bottom: 1rem;}
+        .payment-box p {color: #555; line-height: 1.8; margin-bottom: 1rem;}
     </style>
 </head>
 <body>
     <div class="container">
         <h1>AI TikTok Script Generator AI 抖音脚本生成器</h1>
+        <div class="free-count" id="freeCountDisplay">今日剩余免费次数：3次</div>
         <div class="input-group">
             <label for="topic">Video Topic (e.g., skincare routine, funny cat videos)<br>视频主题（例如，护肤流程、搞笑猫咪视频）</label>
             <input type="text" id="topic" placeholder="Enter your topic here..." value="skincare routine for beginners">
@@ -32,6 +37,20 @@
         <button id="generateBtn">Generate TikTok Script 生成TikTok脚本</button>
         <div class="loading" id="loading">Generating... 生成中...</div>
         <div class="error" id="error"></div>
+        <div class="payment-box" id="paymentBox">
+            <h3>🎉 免费次数已用完！</h3>
+            <p>
+                💎 1元 = 10次生成<br>
+                💎 9.9元 = 无限生成（月卡）<br>
+                💎 29.9元 = 永久无限生成
+            </p>
+            <p>
+                👉 扫码支付后，加微信 <strong>你的微信号</strong><br>
+                发送「已付款」，立即开通权限！
+            </p>
+            <!-- 在这里替换成你的微信/支付宝收款码图片 -->
+            <p style="color: #667eea; font-weight: bold;">（此处放置你的收款码图片）</p>
+        </div>
         <div class="input-group" style="margin-top: 1.5rem;">
             <label for="result">Generated Script 生成的脚本</label>
             <textarea id="result" readonly></textarea>
@@ -48,12 +67,53 @@
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
         const copySuccess = document.getElementById('copySuccess');
+        const freeCountDisplay = document.getElementById('freeCountDisplay');
+        const paymentBox = document.getElementById('paymentBox');
+
+        // 免费次数管理（自动按天重置）
+        const FREE_DAILY_LIMIT = 3;
+        const STORAGE_KEY = 'tiktok_script_free_data';
+
+        function getFreeData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (!data) return { date: new Date().toDateString(), count: FREE_DAILY_LIMIT };
+            const parsed = JSON.parse(data);
+            // 如果是新的一天，重置次数
+            if (parsed.date !== new Date().toDateString()) {
+                return { date: new Date().toDateString(), count: FREE_DAILY_LIMIT };
+            }
+            return parsed;
+        }
+
+        function saveFreeData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function updateFreeCountDisplay() {
+            const data = getFreeData();
+            freeCountDisplay.textContent = `今日剩余免费次数：${data.count}次`;
+            if (data.count <= 0) {
+                paymentBox.style.display = 'block';
+            } else {
+                paymentBox.style.display = 'none';
+            }
+        }
+
+        // 初始化显示
+        updateFreeCountDisplay();
 
         // 生成脚本
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
             if (!topic) {
                 alert('请输入视频主题！');
+                return;
+            }
+
+            // 检查免费次数
+            const freeData = getFreeData();
+            if (freeData.count <= 0) {
+                error.textContent = '免费次数已用完！请看上方的付款提示';
                 return;
             }
 
@@ -75,7 +135,12 @@
                 if (!response.ok) throw new Error(data.error || '请求失败');
 
                 resultTextarea.value = data.script;
-                copyBtn.style.display = 'block'; // 生成成功后显示复制按钮
+                copyBtn.style.display = 'block';
+
+                // 扣除免费次数
+                freeData.count--;
+                saveFreeData(freeData);
+                updateFreeCountDisplay();
             } catch (err) {
                 error.textContent = `出错了：${err.message}`;
                 console.error(err);
@@ -90,12 +155,10 @@
             try {
                 await navigator.clipboard.writeText(resultTextarea.value);
                 copySuccess.style.display = 'block';
-                // 3秒后隐藏成功提示
                 setTimeout(() => {
                     copySuccess.style.display = 'none';
                 }, 3000);
             } catch (err) {
-                // 兼容旧浏览器
                 resultTextarea.select();
                 document.execCommand('copy');
                 copySuccess.style.display = 'block';
