@@ -12,11 +12,11 @@
         .input-group {margin-bottom: 1.5rem;}
         label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: bold;}
         input, textarea {width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;}
-        textarea {min-height: 200px; resize: vertical;}
+        textarea {min-height: 220px; resize: vertical;}
         button {width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s;}
         button:hover {transform: translateY(-2px);}
         .loading {text-align: center; margin: 1rem 0; color: #667eea; display: none;}
-        .error {color: #e74c3c; text-align: center; margin: 1rem 0;}
+        .error {color: #e74c3c; text-align: center; margin: 1rem 0; font-weight: 500;}
     </style>
 </head>
 <body>
@@ -24,7 +24,7 @@
         <h1>AI TikTok Script Generator AI 抖音脚本生成器</h1>
         <div class="input-group">
             <label for="topic">Video Topic (e.g., skincare routine, funny cat videos)<br>视频主题（例如，护肤流程、搞笑猫咪视频）</label>
-            <input type="text" id="topic" placeholder="Enter your video topic here..." value="skincare routine for beginners">
+            <input type="text" id="topic" placeholder="Enter your topic here..." value="skincare routine for beginners">
         </div>
         <button id="generateBtn">Generate TikTok Script 生成TikTok脚本</button>
         <div class="loading" id="loading">Generating... 生成中...</div>
@@ -36,55 +36,6 @@
     </div>
 
     <script>
-        // 🔑 你的 API Key（已填好，直接复制即用）
-        const API_KEY = 'bce-v3/ALTAK-r6UKGR2gHK7Z5CWFRKT53/6a3fc697b3d24c2415e67ecd169282063a199f3f';
-        let accessToken = null;
-
-        // 1. 获取 Access Token
-        async function getAccessToken() {
-            if (accessToken) return accessToken;
-            
-            const params = new URLSearchParams();
-            params.append('grant_type', 'client_credentials');
-            params.append('client_id', API_KEY.split('/')[2]);
-            params.append('client_secret', '');
-
-            try {
-                const resp = await fetch('https://aip.baidubce.com/oauth/2.0/token', {
-                    method: 'POST',
-                    body: params
-                });
-
-                const data = await resp.json();
-                if (data.error) throw new Error(data.error_description);
-                accessToken = data.access_token;
-                return accessToken;
-            } catch (e) {
-                throw new Error('获取 Token 失败：' + e.message);
-            }
-        }
-
-        // 2. 生成脚本
-        async function generateScript(topic) {
-            const token = await getAccessToken();
-            
-            const resp = await fetch(`https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/deepseek_v3?access_token=${token}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [{
-                        role: 'user',
-                        content: `Write a 15-second viral TikTok script: STRONG hook in first 3 seconds, natural spoken dialogue, clear value, 5 trending hashtags. Topic: ${topic}. Only output script + hashtags, no extra text.`
-                    }],
-                    temperature: 0.75,
-                    max_output_tokens: 800
-                })
-            });
-
-            return resp.json();
-        }
-
-        // 3. 交互逻辑
         const generateBtn = document.getElementById('generateBtn');
         const topicInput = document.getElementById('topic');
         const resultTextarea = document.getElementById('result');
@@ -93,16 +44,27 @@
 
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
-            if (!topic) {alert('Please enter a video topic! 请输入视频主题！'); return;}
+            if (!topic) {
+                alert('请输入视频主题！');
+                return;
+            }
 
             loading.style.display = 'block';
             error.textContent = '';
             resultTextarea.value = '';
 
             try {
-                const aiData = await generateScript(topic);
-                if (aiData.error) throw new Error(aiData.error.message);
-                resultTextarea.value = aiData.result || JSON.stringify(aiData);
+                // 只调用自己的后端接口，无跨域问题
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({topic})
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || '请求失败');
+
+                resultTextarea.value = data.script;
             } catch (err) {
                 error.textContent = `出错了：${err.message}`;
                 console.error(err);
