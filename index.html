@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI TikTok Script Generator</title>
     <style>
-        * {margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif;}
+        * {margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif;}
         body {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 2rem; display: flex; justify-content: center; align-items: center;}
-        .container {max-width: 800px; width: 100%; background: #fff; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
+        .container {max-width: 800px; width: 100%; background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
         h1 {color: #333; text-align: center; margin-bottom: 2rem;}
         .input-group {margin-bottom: 1.5rem;}
-        label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: 700;}
+        label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: bold;}
         input, textarea {width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;}
-        textarea {min-height: 220px; resize: vertical; margin-top: 0.5rem;}
-        button {width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.2s;}
+        textarea {min-height: 200px; resize: vertical;}
+        button {width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s;}
         button:hover {transform: translateY(-2px);}
         .loading {text-align: center; margin: 1rem 0; color: #667eea; display: none;}
-        .error {color: #e74c3c; text-align: center; margin: 1rem 0; font-weight: 500;}
+        .error {color: #e74c3c; text-align: center; margin: 1rem 0;}
     </style>
 </head>
 <body>
@@ -29,13 +29,62 @@
         <button id="generateBtn">Generate TikTok Script 生成TikTok脚本</button>
         <div class="loading" id="loading">Generating... 生成中...</div>
         <div class="error" id="error"></div>
-        <div class="input-group">
+        <div class="input-group" style="margin-top: 1.5rem;">
             <label for="result">Generated Script 生成的脚本</label>
             <textarea id="result" readonly></textarea>
         </div>
     </div>
 
     <script>
+        // 🔑 配置你的 API Key（直接填 bce-v3/ 开头的那个）
+        const API_KEY = '这里填你百度千帆 bce-v3/ 开头的 API Key';
+        let accessToken = null;
+
+        // 1. 第一步：通过 API Key 获取合法 Access Token（官方逻辑）
+        async function getAccessToken() {
+            if (accessToken) return accessToken;
+            
+            const params = new URLSearchParams();
+            params.append('grant_type', 'client_credentials');
+            params.append('client_id', API_KEY.split('/')[2]); // 提取 client_id
+            params.append('client_secret', ''); // 新版 Key Secret 留空
+
+            try {
+                const resp = await fetch('https://aip.baidubce.com/oauth/2.0/token', {
+                    method: 'POST',
+                    body: params
+                });
+
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error_description);
+                accessToken = data.access_token;
+                return accessToken;
+            } catch (e) {
+                throw new Error('获取 Token 失败：' + e.message);
+            }
+        }
+
+        // 2. 第二步：调用模型生成脚本
+        async function generateScript(topic) {
+            const token = await getAccessToken();
+            
+            const resp = await fetch(`https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/deepseek_v3?access_token=${token}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [{
+                        role: 'user',
+                        content: `Write a 15-second viral TikTok script: STRONG hook (3s), natural dialogue, clear value, 5 trending hashtags. Topic: ${topic}. Only output script + hashtags, no extra text.`
+                    }],
+                    temperature: 0.75,
+                    max_output_tokens: 800
+                })
+            });
+
+            return resp.json(); // 确保返回的是 JSON
+        }
+
+        // 3. 前端交互逻辑
         const generateBtn = document.getElementById('generateBtn');
         const topicInput = document.getElementById('topic');
         const resultTextarea = document.getElementById('result');
@@ -51,18 +100,11 @@
             resultTextarea.value = '';
 
             try {
-                const response = await fetch('/generate', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({topic})
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || '请求失败');
-
-                resultTextarea.value = data.script;
+                const aiData = await generateScript(topic);
+                if (aiData.error) throw new Error(aiData.error.message);
+                resultTextarea.value = aiData.result || JSON.stringify(aiData);
             } catch (err) {
-                error.textContent = err.message;
+                error.textContent = `出错了：${err.message}`;
                 console.error(err);
             } finally {
                 loading.style.display = 'none';
