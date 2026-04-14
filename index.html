@@ -36,18 +36,18 @@
     </div>
 
     <script>
-        // 🔑 配置你的 API Key（直接填 bce-v3/ 开头的那个）
-        const API_KEY = '这里填你百度千帆 bce-v3/ 开头的 API Key';
+        // 🔑 你的 API Key（已填好，直接复制即用）
+        const API_KEY = 'bce-v3/ALTAK-r6UKGR2gHK7Z5CWFRKT53/6a3fc697b3d24c2415e67ecd169282063a199f3f';
         let accessToken = null;
 
-        // 1. 第一步：通过 API Key 获取合法 Access Token（官方逻辑）
+        // 1. 获取 Access Token
         async function getAccessToken() {
             if (accessToken) return accessToken;
             
             const params = new URLSearchParams();
             params.append('grant_type', 'client_credentials');
-            params.append('client_id', API_KEY.split('/')[2]); // 提取 client_id
-            params.append('client_secret', ''); // 新版 Key Secret 留空
+            params.append('client_id', API_KEY.split('/')[2]);
+            params.append('client_secret', '');
 
             try {
                 const resp = await fetch('https://aip.baidubce.com/oauth/2.0/token', {
@@ -64,7 +64,7 @@
             }
         }
 
-        // 2. 第二步：调用模型生成脚本
+        // 2. 生成脚本
         async function generateScript(topic) {
             const token = await getAccessToken();
             
@@ -74,17 +74,17 @@
                 body: JSON.stringify({
                     messages: [{
                         role: 'user',
-                        content: `Write a 15-second viral TikTok script: STRONG hook (3s), natural dialogue, clear value, 5 trending hashtags. Topic: ${topic}. Only output script + hashtags, no extra text.`
+                        content: `Write a 15-second viral TikTok script: STRONG hook in first 3 seconds, natural spoken dialogue, clear value, 5 trending hashtags. Topic: ${topic}. Only output script + hashtags, no extra text.`
                     }],
                     temperature: 0.75,
                     max_output_tokens: 800
                 })
             });
 
-            return resp.json(); // 确保返回的是 JSON
+            return resp.json();
         }
 
-        // 3. 前端交互逻辑
+        // 3. 交互逻辑
         const generateBtn = document.getElementById('generateBtn');
         const topicInput = document.getElementById('topic');
         const resultTextarea = document.getElementById('result');
@@ -93,7 +93,7 @@
 
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
-            if (!topic) {alert('请输入视频主题！'); return;}
+            if (!topic) {alert('Please enter a video topic! 请输入视频主题！'); return;}
 
             loading.style.display = 'block';
             error.textContent = '';
