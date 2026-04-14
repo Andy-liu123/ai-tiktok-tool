@@ -54,6 +54,7 @@
             resultTextarea.value = '';
 
             try {
+                // ✅ 只调用自己的后端接口，没有任何前端换Token的代码
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
