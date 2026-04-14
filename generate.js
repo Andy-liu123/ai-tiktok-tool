@@ -1,90 +1,74 @@
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  // 1. 允许跨域
+  // 跨域头配置
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
   };
 
-  // 2. 处理预检请求
+  // 处理预检请求
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers });
   }
 
-  // 3. 校验请求方法
+  // 校验请求方法
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers
-    });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
-  // 4. 解析请求体
+  // 解析请求体
   const { topic } = await req.json();
   if (!topic?.trim()) {
-    return new Response(JSON.stringify({ error: 'Please enter a valid topic' }), {
-      status: 400,
-      headers
-    });
+    return new Response(JSON.stringify({ error: 'Please enter a valid video topic' }), { status: 400, headers });
   }
 
-  // 5. 从环境变量拿API Key
+  // 校验API Key
   const API_KEY = process.env.API_KEY;
   if (!API_KEY || !API_KEY.startsWith('bce-v3/')) {
-    return new Response(JSON.stringify({ error: 'Invalid API_KEY' }), {
-      status: 500,
-      headers
-    });
+    return new Response(JSON.stringify({ error: 'Invalid API_KEY' }), { status: 500, headers });
   }
 
   try {
-    // 6. 第一步：后端获取Token（无跨域问题）
-    const tokenResp = await fetch('https://aip.baidubce.com/oauth/2.0/token', {
+    // 调用千帆官方v2/chat/completions接口（你截图里的标准API）
+    const aiResp = await fetch('https://qianfan.baidubce.com/v2/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: API_KEY.split('/')[2],
-        client_secret: ''
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-v3',
+        messages: [
+          {
+            role: 'user',
+            content: `Write a 15-second viral TikTok script:
+            1. STRONG hook in the first 3 seconds
+            2. Natural, conversational spoken dialogue
+            3. Clear value/entertainment
+            4. 5 trending hashtags at the end
+            Topic: ${topic}
+            Keep language casual, TikTok-friendly, only output script + hashtags, no extra explanation.`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
       })
     });
 
-    const tokenData = await tokenResp.json();
-    if (tokenData.error) throw new Error(tokenData.error_description);
-    const access_token = tokenData.access_token;
-
-    // 7. 第二步：调用DeepSeek-V3生成脚本
-    const aiResp = await fetch(
-      `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/deepseek_v3?access_token=${access_token}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{
-            role: 'user',
-            content: `Write a 15-second viral TikTok script: STRONG hook in first 3 seconds, natural dialogue, clear value, 5 trending hashtags. Topic: ${topic}. Only output script + hashtags, no extra text.`
-          }],
-          temperature: 0.7,
-          max_output_tokens: 1000
-        })
-      }
-    );
-
     const aiData = await aiResp.json();
-    if (aiData.error) throw new Error(aiData.error.message);
+    if (aiData.error) {
+      throw new Error(aiData.error.message);
+    }
 
-    // 8. 成功返回，带跨域头
-    return new Response(JSON.stringify({ script: aiData.result }), {
-      headers
-    });
+    // 成功返回脚本
+    return new Response(JSON.stringify({
+      script: aiData.choices[0].message.content
+    }), { headers });
 
   } catch (e) {
     console.error('Server Error:', e);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers
-    });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
   }
 }
