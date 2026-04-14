@@ -5,79 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI TikTok Script Generator</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container {
-            max-width: 800px;
-            width: 100%;
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #555;
-            font-weight: bold;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 0.8rem;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        textarea {
-            min-height: 200px;
-            resize: vertical;
-        }
-        button {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        button:hover {
-            transform: translateY(-2px);
-        }
-        .loading {
-            text-align: center;
-            margin: 1rem 0;
-            color: #667eea;
-            display: none;
-        }
-        .error {
-            color: #e74c3c;
-            text-align: center;
-            margin: 1rem 0;
-        }
+        * {margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif;}
+        body {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 2rem; display: flex; justify-content: center; align-items: center;}
+        .container {max-width: 800px; width: 100%; background: #fff; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
+        h1 {color: #333; text-align: center; margin-bottom: 2rem;}
+        .input-group {margin-bottom: 1.5rem;}
+        label {display: block; margin-bottom: 0.5rem; color: #555; font-weight: 700;}
+        input, textarea {width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;}
+        textarea {min-height: 200px; resize: vertical; margin-top: 0.5rem;}
+        button {width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.2s;}
+        button:hover {transform: translateY(-2px);}
+        .loading {text-align: center; margin: 1rem 0; color: #667eea; display: none;}
+        .error {color: #e74c3c; text-align: center; margin: 1rem 0;}
     </style>
 </head>
 <body>
@@ -85,12 +24,12 @@
         <h1>AI TikTok Script Generator AI 抖音脚本生成器</h1>
         <div class="input-group">
             <label for="topic">Video Topic (e.g., skincare routine, funny cat videos)<br>视频主题（例如，护肤流程、搞笑猫咪视频）</label>
-            <input type="text" id="topic" placeholder="Enter your video topic here..." value="skincare routine for beginners">
+            <input type="text" id="topic" placeholder="Enter your topic..." value="skincare routine for beginners">
         </div>
         <button id="generateBtn">Generate TikTok Script 生成TikTok脚本</button>
         <div class="loading" id="loading">Generating... 生成中...</div>
         <div class="error" id="error"></div>
-        <div class="input-group" style="margin-top: 1.5rem;">
+        <div class="input-group">
             <label for="result">Generated Script 生成的脚本</label>
             <textarea id="result" readonly></textarea>
         </div>
@@ -105,41 +44,35 @@
 
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
-            if (!topic) {
-                alert('Please enter a video topic! 请输入视频主题！');
-                return;
-            }
+            if (!topic) {alert('请输入视频主题！'); return;}
 
             loading.style.display = 'block';
             error.textContent = '';
             resultTextarea.value = '';
 
             try {
+                // 请求后端接口
                 const response = await fetch('/generate', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ topic })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({topic})
                 });
 
-                // 先解析文本，再转JSON，避免解析崩溃
-                const responseText = await response.text();
+                // 先拿文本，再解析JSON，彻底避免解析崩溃
+                const respText = await response.text();
                 let data;
                 try {
-                    data = JSON.parse(responseText);
-                } catch (parseErr) {
-                    throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
+                    data = JSON.parse(respText);
+                } catch (e) {
+                    throw new Error(`接口返回错误：${respText.slice(0, 200)}`);
                 }
 
-                if (!response.ok) {
-                    throw new Error(data.error || `Request failed: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(data.error || '请求失败');
 
                 resultTextarea.value = data.script;
             } catch (err) {
-                console.error('Frontend Error:', err);
-                error.textContent = `出错了：${err.message}`;
+                error.textContent = err.message;
+                console.error(err);
             } finally {
                 loading.style.display = 'none';
             }
