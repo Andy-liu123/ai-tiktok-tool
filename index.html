@@ -54,7 +54,6 @@
             resultTextarea.value = '';
 
             try {
-                // 只调用自己的后端接口，无跨域问题
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
